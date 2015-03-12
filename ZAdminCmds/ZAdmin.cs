@@ -16,7 +16,7 @@ namespace ZAdminCmds
 		public override string Name { get { return "ZAdminCmds"; } }
 		public override string Author { get { return "Zaicon"; } }
 		public override string Description { get { return "Misc Commands"; } }
-		public override Version Version { get { return new Version(1, 0, 0, 0); } }
+		public override Version Version { get { return new Version(1, 1, 0, 0); } }
 
 		public static Config config = new Config();
 		public static string configpath = "tshock/ZAdmin.json";
@@ -238,12 +238,18 @@ namespace ZAdminCmds
 			{
 				var grouprank = (from kvp in config.groupranks where kvp.Key == i select kvp.Value);
 
+				if (grouprank.Count() == 0)
+					continue;
+
 				var playersingroup = (from player in TShock.Players where player != null && player.Group.Name == grouprank.First() select player.Name);
+
+				Group group = TShock.Groups.GetGroupByName(grouprank.First());
+
+				if (group == null)
+					TShock.Log.Warn("Unknown group name in ZAdminConfig.json at rank {0}: {1}", i.ToString(), grouprank.First());
 
 				if (playersingroup.Count() == 0)
 					continue;
-
-				Group group = TShock.Groups.GetGroupByName(grouprank.First());
 
 				if (!config.showGroupNameInsteadOfPrefix)
 					args.Player.SendMessage("{0}: {1}".SFormat(group.Prefix, string.Join(", ", playersingroup)), new Color(group.R, group.G, group.B));
