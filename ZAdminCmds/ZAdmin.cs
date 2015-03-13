@@ -1,5 +1,16 @@
-﻿using System;
+﻿/*
+ * ZAdminCmds by Zaicon
+ * Credit to InanZen & Enerdy for Dayregion command.
+ * Credit to Essentials (Scavenger3, WhiteXZ & others) for /ptime idea.
+ * 
+ */
+
+using Mono.Data.Sqlite;
+using MySql.Data.MySqlClient;
+using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,22 +18,40 @@ using System.Timers;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
+using TShockAPI.DB;
 
 namespace ZAdminCmds
 {
+	public class Time
+	{
+		public bool day;
+		public double frames;
+
+		public static double NOON = 27000;
+		public static double DAY = 0;
+		public static double NIGHT = 0;
+		public static double MIDNIGHT = 16200;
+	}
+
 	[ApiVersion(1,17)]
     public class ZAdmin : TerrariaPlugin
     {
 		public override string Name { get { return "ZAdminCmds"; } }
 		public override string Author { get { return "Zaicon"; } }
 		public override string Description { get { return "Misc Commands"; } }
-		public override Version Version { get { return new Version(1, 1, 0, 0); } }
+		public override Version Version { get { return new Version(1, 2, 0, 0); } }
 
 		public static Config config = new Config();
 		public static string configpath = "tshock/ZAdmin.json";
+		public static bool initialized = false;
 
-		private Timer mutecheck;
+		public static IDbConnection db;
+
+		private Timer update;
 		public static List<string> permamuted = new List<string>();
+		public static List<Region> RegionList = new List<Region>();
+		public static List<int> DayClients = new List<int>();
+		public static Dictionary<int, Time> playertime = new Dictionary<int, Time>();
 
 
 		public ZAdmin(Main game)
@@ -35,6 +64,8 @@ namespace ZAdminCmds
 		public override void Initialize()
 		{
 			ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
+			ServerApi.Hooks.NetSendData.Register(this, SendData);
+			ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
 		}
 
 		protected override void Dispose(bool Disposing)
@@ -42,6 +73,8 @@ namespace ZAdminCmds
 			if (Disposing)
 			{
 				ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
+				ServerApi.Hooks.NetSendData.Deregister(this, SendData);
+				ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
 			}
 			base.Dispose(Disposing);
 		}
@@ -52,24 +85,109 @@ namespace ZAdminCmds
 		{
 			config = config.Read(configpath);
 
-			mutecheck = new Timer { Interval = 1000, AutoReset = true, Enabled = true };
-			mutecheck.Elapsed += new ElapsedEventHandler(OnUpdate);
+			update = new Timer { Interval = 1000, AutoReset = true, Enabled = true };
+			update.Elapsed += new ElapsedEventHandler(OnUpdate);
 
 			Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanInfo, "baninfo"));
 			Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanSearch, "bansearch"));
 			Commands.ChatCommands.Add(new Command("zadmin.xid", ZAXID, "xid"));
 			Commands.ChatCommands.Add(new Command(ZAUserGroups, "usergroups", "ug"));
 			Commands.ChatCommands.Add(new Command("zadmin.pmute", ZAPMute, "pmute"));
+			Commands.ChatCommands.Add(new Command("zadmin.dayregion", ZADayregion, "dayregion"));
+			Commands.ChatCommands.Add(new Command("zadmin.ptime", ZAPTime, "ptime"));
+
+			SetupDb();
+			DayRegions_Read();
+		}
+
+		private void OnLeave(LeaveEventArgs args)
+		{
+			if (DayClients.Contains(args.Who))
+				DayClients.Remove(args.Who);
+
+			if (playertime.ContainsKey(args.Who))
+				playertime.Remove(args.Who);
+		}
+
+		public void SendData(SendDataEventArgs e)
+		{
+			if (e.MsgId == PacketTypes.WorldInfo)
+			{
+				if (e.remoteClient == -1)
+				{
+					double temp = Main.time;
+					bool tempday = Main.dayTime;
+					for (int i = 0; i < TShock.Players.Length; i++)
+					{
+						TSPlayer plr = TShock.Players[i];
+						if (plr == null || plr.Active == false)
+							continue;
+
+						if (playertime.ContainsKey(plr.Index))
+						{
+							Main.dayTime = playertime[plr.Index].day;
+							Main.time = playertime[plr.Index].frames;
+						}
+
+						if (!DayClients.Contains(plr.Index))
+							plr.SendData(PacketTypes.WorldInfo);
+					}
+					e.Handled = true;
+					Main.time = temp;
+					Main.dayTime = tempday;
+				}
+			}
+
+			if (e.MsgId == PacketTypes.TimeSet)
+			{
+				if (e.remoteClient == -1)
+				{
+					foreach (TSPlayer plr in TShock.Players)
+					{
+						if (plr == null || !plr.Active)
+							continue;
+
+						if (playertime.ContainsKey(plr.Index))
+							continue;
+
+						plr.SendData(PacketTypes.TimeSet);
+					}
+
+					e.Handled = true;
+				}
+			}
 		}
 
 		private void OnUpdate(object sender, ElapsedEventArgs args)
 		{
 			foreach (TSPlayer player in TShock.Players)
-				if (player != null)
+				if (player != null && player.Active)
 				{
 					if (permamuted.Contains(player.IP))
 						player.mute = true;
+
+					if (player.CurrentRegion != null && RegionList.Any(p => p.Name == player.CurrentRegion.Name))
+					{
+						if (!DayClients.Contains(player.Index))
+						{
+							DayClients.Add(player.Index);
+							double oldWS = Main.worldSurface;
+							double oldRL = Main.rockLayer;
+							Main.worldSurface = player.CurrentRegion.Area.Bottom;
+							Main.rockLayer = player.CurrentRegion.Area.Bottom + 10;
+							player.SendData(PacketTypes.WorldInfo);
+							Main.worldSurface = oldWS;
+							Main.rockLayer = oldRL;
+						}
+					}
+					else if (DayClients.Contains(player.Index))
+					{
+						DayClients.Remove(player.Index);
+						player.SendData(PacketTypes.WorldInfo);
+					}
 				}
+
+
 		}
 
 		public static Config generateNewConfig()
@@ -397,6 +515,100 @@ namespace ZAdminCmds
 				}
 			}
 		}
+
+		private static void ZADayregion(CommandArgs args)
+		{
+			if (args.Parameters.Count > 1)
+			{
+				var region = TShock.Regions.GetRegionByName(args.Parameters[1]);
+				if (region != null && region.Name != "")
+				{
+					if (args.Parameters[0] == "add")
+					{
+						RegionList.Add(region);
+						args.Player.SendMessage(String.Format("Region '{0}' added to Day Region list", region.Name), Color.BurlyWood);
+						return;
+					}
+					else if (args.Parameters[0] == "del")
+					{
+						DayRegions_Delete(region.Name);
+						args.Player.SendMessage(String.Format("Region '{0}' deleted from Day Region list", region.Name), Color.BurlyWood);
+						return;
+					}
+				}
+				else
+				{
+					args.Player.SendErrorMessage("Region '{0}' not found", args.Parameters[1]);
+				}
+			}
+
+			args.Player.SendErrorMessage("Invalid syntax: /dayregion <add/del> <region name>");
+		}
+
+		private void ZAPTime(CommandArgs args)
+		{
+			Time temp = new Time() { frames = -2, day = true };
+
+			if (args.Parameters.Count == 1)
+			{
+				switch (args.Parameters[0].ToLower())
+				{
+					case "day":
+						temp.day = true;
+						temp.frames = Time.DAY;
+						break;
+					case "night":
+						temp.day = false;
+						temp.frames = Time.NIGHT;
+						break;
+					case "noon":
+						temp.day = true;
+						temp.frames = Time.NOON;
+						break;
+					case "midnight":
+						temp.day = false;
+						temp.frames = Time.MIDNIGHT;
+						break;
+					case "off":
+						temp.day = true;
+						temp.frames = -1;
+						break;
+					default:
+						break;
+				}
+			}
+
+			if (temp.frames == -1)
+			{
+				if (playertime.ContainsKey(args.Player.Index))
+				{
+					playertime.Remove(args.Player.Index);
+					args.Player.SendSuccessMessage("Set your time to server time.");
+					SendData(new SendDataEventArgs() { MsgId = PacketTypes.WorldInfo, Handled = false, remoteClient = -1 });
+					return;
+				}
+				else
+				{
+					args.Player.SendErrorMessage("Your time is already the server time!");
+					return;
+				}
+			}
+
+			if (temp.frames == -2)
+			{
+				args.Player.SendErrorMessage("Invalid usage: /ptime <day/noon/night/midnight/off>");
+				return;
+			}
+
+			if (playertime.ContainsKey(args.Player.Index))
+				playertime[args.Player.Index] = temp;
+			else
+				playertime.Add(args.Player.Index, temp);
+
+			SendData(new SendDataEventArgs() { MsgId = PacketTypes.WorldInfo, Handled = false, remoteClient = -1 });
+
+			args.Player.SendSuccessMessage("Set your personal time to {0}.", args.Parameters[0]);
+		}
 		#endregion
 
 		private int clearMutes(string type)
@@ -444,5 +656,86 @@ namespace ZAdminCmds
 
 			return count;
 		}
+
+		#region Database
+		private void SetupDb()
+		{
+			if (TShock.Config.StorageType.ToLower() == "sqlite")
+			{
+				string sql = Path.Combine(TShock.SavePath, "Dayregions.sqlite");
+				db = new SqliteConnection(string.Format("uri=file://{0},Version=3", sql));
+			}
+			else if (TShock.Config.StorageType.ToLower() == "mysql")
+			{
+				try
+				{
+					var hostport = TShock.Config.MySqlHost.Split(':');
+					db = new MySqlConnection();
+					db.ConnectionString =
+						String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
+									  hostport[0],
+									  hostport.Length > 1 ? hostport[1] : "3306",
+									  TShock.Config.MySqlDbName,
+									  TShock.Config.MySqlUsername,
+									  TShock.Config.MySqlPassword
+							);
+				}
+				catch (MySqlException ex)
+				{
+					TShock.Log.Error(ex.ToString());
+					throw new Exception("MySql not setup correctly");
+				}
+			}
+			else
+			{
+				throw new Exception("Invalid storage type");
+			}
+
+			SqlTableCreator SQLcreator = new SqlTableCreator(db, db.GetSqlType() == SqlType.Sqlite ? (IQueryBuilder)new SqliteQueryCreator() : new MysqlQueryCreator());
+
+			var table = new SqlTable("Dayregions",
+				new SqlColumn("ID", MySqlDbType.Int32) { Primary = true, AutoIncrement = true, NotNull = true },
+				new SqlColumn("Region", MySqlDbType.VarChar) { Unique = true, Length = 30 }
+			);
+			SQLcreator.EnsureTableStructure(table);
+		}
+
+		private static void DayRegions_Read()
+		{
+			QueryResult reader;
+			lock (db)
+			{
+				reader = db.QueryReader("SELECT Region FROM DayRegions");
+			}
+			lock (RegionList)
+			{
+				while (reader.Read())
+				{
+					var region = TShock.Regions.GetRegionByName(reader.Get<string>("Region"));
+					if (region != null && region.Name != "")
+						RegionList.Add(region);
+					else
+						DayRegions_Delete(reader.Get<string>("Region"));
+				}
+				reader.Dispose();
+			}
+		}
+
+		private static void DayRegions_Add(string name)
+		{
+			db.Query("INSERT INTO DayRegions SET (Region) VALUES @0;", name);
+		}
+		private static void DayRegions_Delete(string name)
+		{
+			lock (db)
+			{
+				db.Query("DELETE FROM DayRegions WHERE Region = @0", name);
+			}
+			lock (RegionList)
+			{
+				RegionList.RemoveAll(p => p.Name == name);
+			}
+		}
+		#endregion
 	}
 }
