@@ -33,13 +33,13 @@ namespace ZAdminCmds
 		public static double MIDNIGHT = 16200;
 	}
 
-	[ApiVersion(1,19)]
+	[ApiVersion(1,20)]
     public class ZAdmin : TerrariaPlugin
     {
 		public override string Name { get { return "ZAdminCmds"; } }
 		public override string Author { get { return "Zaicon"; } }
 		public override string Description { get { return "Misc Commands"; } }
-		public override Version Version { get { return new Version(1, 2, 2, 0); } }
+		public override Version Version { get { return new Version(1, 2, 3, 0); } }
 
 		public static Config config = new Config();
 		public static string configpath = "tshock/ZAdmin.json";
