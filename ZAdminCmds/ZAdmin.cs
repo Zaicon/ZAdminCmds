@@ -12,8 +12,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 using Terraria;
 using TerrariaApi.Server;
@@ -22,7 +20,7 @@ using TShockAPI.DB;
 
 namespace ZAdminCmds
 {
-	public class Time
+    public class Time
 	{
 		public bool day;
 		public double frames;
@@ -33,13 +31,13 @@ namespace ZAdminCmds
 		public static double MIDNIGHT = 16200;
 	}
 
-	[ApiVersion(1,21)]
+	[ApiVersion(1, 22)]
     public class ZAdmin : TerrariaPlugin
     {
 		public override string Name { get { return "ZAdminCmds"; } }
 		public override string Author { get { return "Zaicon"; } }
 		public override string Description { get { return "Misc Commands"; } }
-		public override Version Version { get { return new Version(1, 2, 4, 0); } }
+		public override Version Version { get { return new Version(1, 2, 5, 0); } }
 
 		public static Config config = new Config();
 		public static string configpath = "tshock/ZAdmin.json";
