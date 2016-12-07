@@ -5,6 +5,7 @@
  * 
  */
 
+using Microsoft.Xna.Framework;
 using Mono.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using System;
@@ -32,7 +33,7 @@ namespace ZAdminCmds
 		public static double MIDNIGHT = 16200;
 	}
 
-	[ApiVersion(1, 25)]
+	[ApiVersion(1, 26)]
     public class ZAdmin : TerrariaPlugin
     {
 		public override string Name { get { return "ZAdminCmds"; } }
@@ -40,14 +41,14 @@ namespace ZAdminCmds
 		public override string Description { get { return "Misc Commands"; } }
 		public override Version Version { get { return Assembly.GetExecutingAssembly().GetName().Version; } }
 
-		public static Config config = new Config();
-		public static string configpath = "tshock/ZAdmin.json";
+		//public static Config config = new Config();
+		//public static string configpath = "tshock/ZAdmin.json";
 		public static bool initialized = false;
 
 		public static IDbConnection db;
 
 		private Timer update;
-		public static List<string> permamuted = new List<string>();
+		//public static List<string> permamuted = new List<string>();
 		public static List<Region> RegionList = new List<Region>();
 		public static List<int> DayClients = new List<int>();
 		public static Dictionary<int, Time> playertime = new Dictionary<int, Time>();
@@ -82,16 +83,16 @@ namespace ZAdminCmds
 		#region Hooks
 		private void OnInitialize(EventArgs args)
 		{
-			config = config.Read(configpath);
+			//config = config.Read(configpath);
 
 			update = new Timer { Interval = 1000, AutoReset = true, Enabled = true };
 			update.Elapsed += new ElapsedEventHandler(OnUpdate);
 
-			Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanInfo, "baninfo"));
-			Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanSearch, "bansearch"));
-			Commands.ChatCommands.Add(new Command("zadmin.xid", ZAXID, "xid"));
-			Commands.ChatCommands.Add(new Command(ZAUserGroups, "usergroups", "ug"));
-			Commands.ChatCommands.Add(new Command("zadmin.pmute", ZAPMute, "pmute"));
+			//Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanInfo, "baninfo"));
+			//Commands.ChatCommands.Add(new Command("zadmin.baninfo", ZABanSearch, "bansearch"));
+			//Commands.ChatCommands.Add(new Command("zadmin.xid", ZAXID, "xid"));
+			//Commands.ChatCommands.Add(new Command(ZAUserGroups, "usergroups", "ug"));
+			//Commands.ChatCommands.Add(new Command("zadmin.pmute", ZAPMute, "pmute"));
 			Commands.ChatCommands.Add(new Command("zadmin.dayregion", ZADayregion, "dayregion"));
 			Commands.ChatCommands.Add(new Command("zadmin.ptime", ZAPTime, "ptime"));
 
@@ -162,8 +163,8 @@ namespace ZAdminCmds
 			foreach (TSPlayer player in TShock.Players)
 				if (player != null && player.Active)
 				{
-					if (permamuted.Contains(player.IP))
-						player.mute = true;
+					//if (permamuted.Contains(player.IP))
+					//	player.mute = true;
 
 					if (player.CurrentRegion != null && RegionList.Any(p => p.Name == player.CurrentRegion.Name))
 					{
@@ -189,27 +190,27 @@ namespace ZAdminCmds
 
 		}
 
-		public static Config generateNewConfig()
-		{
-			Config newconfig = new Config();
-			int count = TShock.Groups.Count();
+		//public static Config generateNewConfig()
+		//{
+		//	Config newconfig = new Config();
+		//	int count = TShock.Groups.Count();
 
-			newconfig.groupranks = new Dictionary<int, string>();
+		//	newconfig.groupranks = new Dictionary<int, string>();
 
-			foreach (Group group in TShock.Groups)
-			{
-				newconfig.groupranks.Add(count--, group.Name);
-			}
+		//	foreach (Group group in TShock.Groups)
+		//	{
+		//		newconfig.groupranks.Add(count--, group.Name);
+		//	}
 
-			newconfig.Write(configpath);
+		//	newconfig.Write(configpath);
 
-			return newconfig;
-		}
+		//	return newconfig;
+		//}
 
-		private void LoadConfig()
-		{
-			config = config.Read(configpath);
-		}
+		//private void LoadConfig()
+		//{
+		//	config = config.Read(configpath);
+		//}
 		#endregion
 
 		#region Commands
@@ -328,192 +329,192 @@ namespace ZAdminCmds
 			args.Player.SendInfoMessage("Online players: {0}", string.Join(", ", players.Select(p => "(" + p.Name + ", " + p.Index.ToString() + ")")));
 		}
 
-		private void ZAUserGroups(CommandArgs args)
-		{
-			if (args.Parameters.Count == 1 && args.Parameters[0] == "reload" && args.Player.Group.HasPermission("zadmin.reload"))
-			{
-				LoadConfig();
-				args.Player.SendSuccessMessage("ZAdminConfig.json reloaded successfully!");
-				return;
-			}
+		//private void ZAUserGroups(CommandArgs args)
+		//{
+		//	if (args.Parameters.Count == 1 && args.Parameters[0] == "reload" && args.Player.Group.HasPermission("zadmin.reload"))
+		//	{
+		//		LoadConfig();
+		//		args.Player.SendSuccessMessage("ZAdminConfig.json reloaded successfully!");
+		//		return;
+		//	}
 
-			int highestrank = -1;
+		//	int highestrank = -1;
 
-			foreach (KeyValuePair<int, string> kvp in config.groupranks)
-			{
-				if (kvp.Key > highestrank)
-					highestrank = kvp.Key;
-			}
+		//	foreach (KeyValuePair<int, string> kvp in config.groupranks)
+		//	{
+		//		if (kvp.Key > highestrank)
+		//			highestrank = kvp.Key;
+		//	}
 
-			if ((highestrank > config.highestRankToDisplay && !(args.Parameters.Count == 1 && args.Parameters[0] == "all")))
-			{
-				highestrank = config.highestRankToDisplay;
-			}
+		//	if ((highestrank > config.highestRankToDisplay && !(args.Parameters.Count == 1 && args.Parameters[0] == "all")))
+		//	{
+		//		highestrank = config.highestRankToDisplay;
+		//	}
 
-			args.Player.SendSuccessMessage("Online Players:");
-			for (int i = 1; i < highestrank + 1; i++)
-			{
-				var grouprank = (from kvp in config.groupranks where kvp.Key == i select kvp.Value);
+		//	args.Player.SendSuccessMessage("Online Players:");
+		//	for (int i = 1; i < highestrank + 1; i++)
+		//	{
+		//		var grouprank = (from kvp in config.groupranks where kvp.Key == i select kvp.Value);
 
-				if (grouprank.Count() == 0)
-					continue;
+		//		if (grouprank.Count() == 0)
+		//			continue;
 
-				var playersingroup = (from player in TShock.Players where player != null && player.Group.Name == grouprank.First() select player.Name);
+		//		var playersingroup = (from player in TShock.Players where player != null && player.Group.Name == grouprank.First() select player.Name);
 
-				Group group = TShock.Groups.GetGroupByName(grouprank.First());
+		//		Group group = TShock.Groups.GetGroupByName(grouprank.First());
 
-				if (group == null)
-					TShock.Log.Warn("Unknown group name in ZAdminConfig.json at rank {0}: {1}", i.ToString(), grouprank.First());
+		//		if (group == null)
+		//			TShock.Log.Warn("Unknown group name in ZAdminConfig.json at rank {0}: {1}", i.ToString(), grouprank.First());
 
-				if (playersingroup.Count() == 0)
-					continue;
+		//		if (playersingroup.Count() == 0)
+		//			continue;
 
-				if (!config.showGroupNameInsteadOfPrefix)
-					args.Player.SendMessage("{0}: {1}".SFormat(group.Prefix, string.Join(", ", playersingroup)), new Color(group.R, group.G, group.B));
-				else
-					args.Player.SendMessage("{0}: {1}".SFormat(group.Name, string.Join(", ", playersingroup)), new Color(group.R, group.G, group.B));
-			}
-		}
+		//		if (!config.showGroupNameInsteadOfPrefix)
+		//			args.Player.SendMessage("{0}: {1}".SFormat(group.Prefix, string.Join(", ", playersingroup)), new Color(group.R, group.G, group.B));
+		//		else
+		//			args.Player.SendMessage("{0}: {1}".SFormat(group.Name, string.Join(", ", playersingroup)), new Color(group.R, group.G, group.B));
+		//	}
+		//}
 
-		private void ZAPMute(CommandArgs args)
-		{
-			if (args.Parameters.Count == 0 || args.Parameters.Count > 2)
-			{
-				args.Player.SendErrorMessage("Invalid syntax:");
-				args.Player.SendErrorMessage("/pmute <player>");
-				args.Player.SendErrorMessage("/pmute -list");
-				args.Player.SendErrorMessage("/pmute -clear");
-				args.Player.SendErrorMessage("/pmute -check <player>");
-			}
-			else if (args.Parameters.Count == 1)
-			{
-				if (args.Parameters[0] == "-all" || args.Parameters[0] == "-list")
-				{
-					var pmuted = (from player in TShock.Players where player != null && permamuted.Contains(player.IP) select player.Name);
-					var muted = (from player in TShock.Players where player != null && !permamuted.Contains(player.IP) && player.mute select player.Name);
+		//private void ZAPMute(CommandArgs args)
+		//{
+		//	if (args.Parameters.Count == 0 || args.Parameters.Count > 2)
+		//	{
+		//		args.Player.SendErrorMessage("Invalid syntax:");
+		//		args.Player.SendErrorMessage("/pmute <player>");
+		//		args.Player.SendErrorMessage("/pmute -list");
+		//		args.Player.SendErrorMessage("/pmute -clear");
+		//		args.Player.SendErrorMessage("/pmute -check <player>");
+		//	}
+		//	else if (args.Parameters.Count == 1)
+		//	{
+		//		if (args.Parameters[0] == "-all" || args.Parameters[0] == "-list")
+		//		{
+		//			var pmuted = (from player in TShock.Players where player != null && permamuted.Contains(player.IP) select player.Name);
+		//			var muted = (from player in TShock.Players where player != null && !permamuted.Contains(player.IP) && player.mute select player.Name);
 					
-					if (pmuted.Count() > 0)
-						args.Player.SendInfoMessage("Permamuted players: {0}", string.Join(", ", pmuted));
-					else
-						args.Player.SendInfoMessage("No permamuted players.");
-					if (muted.Count() > 0)
-						args.Player.SendInfoMessage("Muted players: {0}", string.Join(", ", muted));
-					else
-						args.Player.SendInfoMessage("No muted players.");
+		//			if (pmuted.Count() > 0)
+		//				args.Player.SendInfoMessage("Permamuted players: {0}", string.Join(", ", pmuted));
+		//			else
+		//				args.Player.SendInfoMessage("No permamuted players.");
+		//			if (muted.Count() > 0)
+		//				args.Player.SendInfoMessage("Muted players: {0}", string.Join(", ", muted));
+		//			else
+		//				args.Player.SendInfoMessage("No muted players.");
 
-					return;
-				}
+		//			return;
+		//		}
 
-				List<TSPlayer> mutedplayerlist = TShock.Utils.FindPlayer(args.Parameters[0]);
+		//		List<TSPlayer> mutedplayerlist = TShock.Utils.FindPlayer(args.Parameters[0]);
 
-				if (mutedplayerlist.Count == 0)
-					args.Player.SendErrorMessage("No players matched.");
-				else if (mutedplayerlist.Count > 1)
-					TShock.Utils.SendMultipleMatchError(args.Player, mutedplayerlist.Select(p => p.Name));
-				else
-				{
-					TSPlayer mutedplayer = mutedplayerlist[0];
-					if (mutedplayer.mute)
-					{
-						if (permamuted.Contains(mutedplayer.IP))
-						{
-							mutedplayer.mute = false;
-							permamuted.Remove(mutedplayer.IP);
-								mutedplayer.SendInfoMessage("You are no longer muted.");
-							if (!args.Silent)
-								TSPlayer.All.SendInfoMessage("{0} has unmuted {1}!", args.Player.Name, mutedplayer.Name);
-							args.Player.SendSuccessMessage("{0} has been unmuted.", mutedplayer.Name);
-						}
-						else
-						{
-							permamuted.Add(mutedplayer.IP);
-							if (!args.Silent)
-								TSPlayer.All.SendInfoMessage("{0} has permamuted {1}!", args.Player.Name, mutedplayer.Name);
-							mutedplayer.SendInfoMessage("You have been permamuted!");
-							args.Player.SendSuccessMessage("{0}'s mute has been made permanent.", mutedplayer.Name);
-						}
-					}
-					else if (mutedplayer.Group.HasPermission(Permissions.mute) && !args.Player.Group.HasPermission("zadmin.muteall"))
-					{
-						args.Player.SendErrorMessage("You cannot mute this player.");
-					}
-					else
-					{
-						mutedplayer.mute = true;
-						permamuted.Add(mutedplayer.IP);
-						if (!args.Silent)
-							TSPlayer.All.SendInfoMessage("{0} has permamuted {1}!", args.Player.Name, mutedplayer.Name);
-						mutedplayer.SendInfoMessage("You have been permamuted!");
-						args.Player.SendSuccessMessage("{0} has been permamuted.", mutedplayer.Name);
-					}
-				}
-			}
-			else
-			{
-				if (args.Parameters[0] == "-check")
-				{
-					List<TSPlayer> mutedplayerlist = TShock.Utils.FindPlayer(args.Parameters[1]);
+		//		if (mutedplayerlist.Count == 0)
+		//			args.Player.SendErrorMessage("No players matched.");
+		//		else if (mutedplayerlist.Count > 1)
+		//			TShock.Utils.SendMultipleMatchError(args.Player, mutedplayerlist.Select(p => p.Name));
+		//		else
+		//		{
+		//			TSPlayer mutedplayer = mutedplayerlist[0];
+		//			if (mutedplayer.mute)
+		//			{
+		//				if (permamuted.Contains(mutedplayer.IP))
+		//				{
+		//					mutedplayer.mute = false;
+		//					permamuted.Remove(mutedplayer.IP);
+		//						mutedplayer.SendInfoMessage("You are no longer muted.");
+		//					if (!args.Silent)
+		//						TSPlayer.All.SendInfoMessage("{0} has unmuted {1}!", args.Player.Name, mutedplayer.Name);
+		//					args.Player.SendSuccessMessage("{0} has been unmuted.", mutedplayer.Name);
+		//				}
+		//				else
+		//				{
+		//					permamuted.Add(mutedplayer.IP);
+		//					if (!args.Silent)
+		//						TSPlayer.All.SendInfoMessage("{0} has permamuted {1}!", args.Player.Name, mutedplayer.Name);
+		//					mutedplayer.SendInfoMessage("You have been permamuted!");
+		//					args.Player.SendSuccessMessage("{0}'s mute has been made permanent.", mutedplayer.Name);
+		//				}
+		//			}
+		//			else if (mutedplayer.Group.HasPermission(Permissions.mute) && !args.Player.Group.HasPermission("zadmin.muteall"))
+		//			{
+		//				args.Player.SendErrorMessage("You cannot mute this player.");
+		//			}
+		//			else
+		//			{
+		//				mutedplayer.mute = true;
+		//				permamuted.Add(mutedplayer.IP);
+		//				if (!args.Silent)
+		//					TSPlayer.All.SendInfoMessage("{0} has permamuted {1}!", args.Player.Name, mutedplayer.Name);
+		//				mutedplayer.SendInfoMessage("You have been permamuted!");
+		//				args.Player.SendSuccessMessage("{0} has been permamuted.", mutedplayer.Name);
+		//			}
+		//		}
+		//	}
+		//	else
+		//	{
+		//		if (args.Parameters[0] == "-check")
+		//		{
+		//			List<TSPlayer> mutedplayerlist = TShock.Utils.FindPlayer(args.Parameters[1]);
 
-					if (mutedplayerlist.Count == 0)
-						args.Player.SendErrorMessage("No players matched.");
-					else if (mutedplayerlist.Count > 1)
-						TShock.Utils.SendMultipleMatchError(args.Player, mutedplayerlist.Select(p => p.Name));
-					else
-					{
-						TSPlayer mutedplayer = mutedplayerlist[0];
-						if (mutedplayer.mute)
-						{
-							if (permamuted.Contains(mutedplayer.IP))
-							{
-								args.Player.SendInfoMessage("{0} is permamuted.", mutedplayer.Name);
-							}
-							else
-							{
-								args.Player.SendInfoMessage("{0} is muted.", mutedplayer.Name);
-							}
-						}
-						else
-						{
-							args.Player.SendInfoMessage("{0} is not muted.", mutedplayer.Name);
-						}
-					}
-				}
-				else if (args.Parameters[0].ToLower() == "-clear")
-				{
-					int temp = 0;
-					if (args.Parameters[1] == "all" || args.Parameters[1].ToLower() == "mute" || args.Parameters[1].ToLower() == "pmute")
-					{
-						temp = clearMutes(args.Parameters[1]);
-						if (!args.Silent)
-						{
-							if (args.Parameters[1] == "all")
-								TSPlayer.All.SendInfoMessage("{0} has unmuted everyone!", args.Player.Name);
-							else if (args.Parameters[1] == "mute")
-								TSPlayer.All.SendInfoMessage("{0} has unmuted everyone that isn't permamuted!", args.Player.Name);
-							else
-								TSPlayer.All.SendInfoMessage("{0} has unmuted everyone that was permamuted!", args.Player.Name);
-						}
-						args.Player.SendSuccessMessage("{0} players were unmuted.", temp.ToString());
-					}
-					else
-					{
-						args.Player.SendErrorMessage("Invalid syntax:");
-						args.Player.SendErrorMessage("/pmute <player>");
-						args.Player.SendErrorMessage("/pmute list");
-						args.Player.SendErrorMessage("/pmute clear <mute/pmute/all>");
-						args.Player.SendErrorMessage("/pmute check <player>");
-					}
-				}
-				else
-				{
-					args.Player.SendErrorMessage("Invalid syntax:");
-					args.Player.SendErrorMessage("/pmute <player>");
-					args.Player.SendErrorMessage("/pmute -list");
-					args.Player.SendErrorMessage("/pmute -clear <mute/pmute/all>");
-					args.Player.SendErrorMessage("/pmute -check <player>");
-				}
-			}
-		}
+		//			if (mutedplayerlist.Count == 0)
+		//				args.Player.SendErrorMessage("No players matched.");
+		//			else if (mutedplayerlist.Count > 1)
+		//				TShock.Utils.SendMultipleMatchError(args.Player, mutedplayerlist.Select(p => p.Name));
+		//			else
+		//			{
+		//				TSPlayer mutedplayer = mutedplayerlist[0];
+		//				if (mutedplayer.mute)
+		//				{
+		//					if (permamuted.Contains(mutedplayer.IP))
+		//					{
+		//						args.Player.SendInfoMessage("{0} is permamuted.", mutedplayer.Name);
+		//					}
+		//					else
+		//					{
+		//						args.Player.SendInfoMessage("{0} is muted.", mutedplayer.Name);
+		//					}
+		//				}
+		//				else
+		//				{
+		//					args.Player.SendInfoMessage("{0} is not muted.", mutedplayer.Name);
+		//				}
+		//			}
+		//		}
+		//		else if (args.Parameters[0].ToLower() == "-clear")
+		//		{
+		//			int temp = 0;
+		//			if (args.Parameters[1] == "all" || args.Parameters[1].ToLower() == "mute" || args.Parameters[1].ToLower() == "pmute")
+		//			{
+		//				temp = clearMutes(args.Parameters[1]);
+		//				if (!args.Silent)
+		//				{
+		//					if (args.Parameters[1] == "all")
+		//						TSPlayer.All.SendInfoMessage("{0} has unmuted everyone!", args.Player.Name);
+		//					else if (args.Parameters[1] == "mute")
+		//						TSPlayer.All.SendInfoMessage("{0} has unmuted everyone that isn't permamuted!", args.Player.Name);
+		//					else
+		//						TSPlayer.All.SendInfoMessage("{0} has unmuted everyone that was permamuted!", args.Player.Name);
+		//				}
+		//				args.Player.SendSuccessMessage("{0} players were unmuted.", temp.ToString());
+		//			}
+		//			else
+		//			{
+		//				args.Player.SendErrorMessage("Invalid syntax:");
+		//				args.Player.SendErrorMessage("/pmute <player>");
+		//				args.Player.SendErrorMessage("/pmute list");
+		//				args.Player.SendErrorMessage("/pmute clear <mute/pmute/all>");
+		//				args.Player.SendErrorMessage("/pmute check <player>");
+		//			}
+		//		}
+		//		else
+		//		{
+		//			args.Player.SendErrorMessage("Invalid syntax:");
+		//			args.Player.SendErrorMessage("/pmute <player>");
+		//			args.Player.SendErrorMessage("/pmute -list");
+		//			args.Player.SendErrorMessage("/pmute -clear <mute/pmute/all>");
+		//			args.Player.SendErrorMessage("/pmute -check <player>");
+		//		}
+		//	}
+		//}
 
 		private static void ZADayregion(CommandArgs args)
 		{
@@ -610,51 +611,51 @@ namespace ZAdminCmds
 		}
 		#endregion
 
-		private int clearMutes(string type)
-		{
-			int count = 0;
+		//private int clearMutes(string type)
+		//{
+		//	int count = 0;
 
-			switch (type)
-			{
-				case "all":
-					permamuted.Clear();
-					foreach (TSPlayer player in TShock.Players)
-					{
-						if (player != null && player.mute)
-						{
-							player.mute = false;
-							count++;
-						}
-					}
-					break;
-				case "pmute":
-					foreach (TSPlayer player in TShock.Players)
-					{
-						if (player != null && permamuted.Contains(player.IP))
-						{
-							player.mute = false;
-							count++;
-						}
-					}
-					permamuted.Clear();
-					break;
-				case "mute":
-					foreach (TSPlayer player in TShock.Players)
-					{
-						if (player != null && player.mute)
-						{
-							//While this temporarily unmutes permamuted players, they will be muted again in one second or less.
-							player.mute = false;
-							count++;
-						}
-					}
-					break;
-				default:
-					break;
-			}
+		//	switch (type)
+		//	{
+		//		case "all":
+		//			permamuted.Clear();
+		//			foreach (TSPlayer player in TShock.Players)
+		//			{
+		//				if (player != null && player.mute)
+		//				{
+		//					player.mute = false;
+		//					count++;
+		//				}
+		//			}
+		//			break;
+		//		case "pmute":
+		//			foreach (TSPlayer player in TShock.Players)
+		//			{
+		//				if (player != null && permamuted.Contains(player.IP))
+		//				{
+		//					player.mute = false;
+		//					count++;
+		//				}
+		//			}
+		//			permamuted.Clear();
+		//			break;
+		//		case "mute":
+		//			foreach (TSPlayer player in TShock.Players)
+		//			{
+		//				if (player != null && player.mute)
+		//				{
+		//					//While this temporarily unmutes permamuted players, they will be muted again in one second or less.
+		//					player.mute = false;
+		//					count++;
+		//				}
+		//			}
+		//			break;
+		//		default:
+		//			break;
+		//	}
 
-			return count;
-		}
+		//	return count;
+		//}
 
 		#region Database
 		private void SetupDb()
@@ -669,15 +670,17 @@ namespace ZAdminCmds
 				try
 				{
 					var hostport = TShock.Config.MySqlHost.Split(':');
-					db = new MySqlConnection();
-					db.ConnectionString =
+					db = new MySqlConnection()
+					{
+						ConnectionString =
 						String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
 									  hostport[0],
 									  hostport.Length > 1 ? hostport[1] : "3306",
 									  TShock.Config.MySqlDbName,
 									  TShock.Config.MySqlUsername,
 									  TShock.Config.MySqlPassword
-							);
+							)
+					};
 				}
 				catch (MySqlException ex)
 				{
