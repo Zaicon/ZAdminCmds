@@ -5,6 +5,7 @@
  * 
  */
 
+using Microsoft.Xna.Framework;
 using Mono.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using System;
@@ -32,7 +33,7 @@ namespace ZAdminCmds
 		public static double MIDNIGHT = 16200;
 	}
 
-	[ApiVersion(1, 25)]
+	[ApiVersion(2,0)]
     public class ZAdmin : TerrariaPlugin
     {
 		public override string Name { get { return "ZAdminCmds"; } }
@@ -669,15 +670,17 @@ namespace ZAdminCmds
 				try
 				{
 					var hostport = TShock.Config.MySqlHost.Split(':');
-					db = new MySqlConnection();
-					db.ConnectionString =
+					db = new MySqlConnection()
+					{
+						ConnectionString =
 						String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
 									  hostport[0],
 									  hostport.Length > 1 ? hostport[1] : "3306",
 									  TShock.Config.MySqlDbName,
 									  TShock.Config.MySqlUsername,
 									  TShock.Config.MySqlPassword
-							);
+							)
+					};
 				}
 				catch (MySqlException ex)
 				{
